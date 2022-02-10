@@ -1,0 +1,229 @@
+1) 
+
+build option:
+
+
+mkdir composetest
+cd composetest
+
+vim dockerfile
+
+ARG Version
+FROM ubuntu:$Version
+MAINTAINER Prasanti
+RUN apt-get update
+RUN apt-get install -y iputils-ping
+CMD sleep 3000
+
+vim docker-compose.yml
+
+version: "3.8"
+services:
+  webapp:
+    build:
+      context: .
+      dockerfile: dockerfile
+      args:
+        Version: "latest"
+
+docker-compose up -d
+
+vim docker-compose1.yml
+
+version: "3.8"
+services:
+  webapp:
+    image: nginx:latest
+    
+
+docker-compose -f docker-compose1.yml up
+
+
+2) environment option
+
+cd composetest
+vim dockerfile5
+
+FROM ubuntu:latest
+MAINTAINER Prasanti
+ENV sample=hello
+RUN apt-get update
+RUN apt-get install -y iputils-ping
+RUN mkdir $sample
+CMD echo $sample
+
+cd ..
+vim docker-compose5.yml
+
+version: "3.8"
+services:
+  webapp5:
+    build:
+      context: .
+      dockerfile: dockerfile
+    image: myubuntuimage:latest
+    environment:
+      sample: helloworld
+    
+docker-compose -f docker-compose5.yml up
+
+3) image and ports:
+
+example:
+
+vim docker-compose2.yml
+
+version: "3.8"
+services:
+  webapp1:
+    build:
+      context: ./composetest
+      dockerfile: dockerfile
+      args:
+        Version: "latest"
+    image : myubuntu
+     
+
+docker-compose -f docker-compose2.yml up 
+
+example 2: 
+
+vim docker-compose6.yml
+
+version: "3.8"
+services:
+  webapp6:
+    image : nginx
+    ports:
+      - "8080:80"
+     
+
+docker-compose -f docker-compose6.yml up
+
+4)  Networking
+
+
+example:
+vim docker-compose10.yml
+
+version: "3.8"
+services:
+  web:
+    image: nginx:alpine
+    volumes:
+      - type: volume
+        source: mydata1
+        target: /data
+        volume:
+          nocopy: true 
+    networks:
+      - frontend
+      - existingnetwork
+      
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_PASSWORD: mysecretpassword
+    volumes:
+      - "/var/run/postgres/postgres.sock:/var/run/postgres/postgres.sock"
+      - "dbdata:/var/lib/postgresql/data"
+    networks:
+      - frontend
+      - existingnetwork
+volumes: 
+  mydata1: 
+  dbdata:
+networks:
+  frontend:
+    driver: bridge
+  existingnetwork:
+    external:
+      name: mybridge
+
+docker-compose -f docker-compose10.yml up -d
+
+docker exec -it root_db_1 /bin/bash
+apt-get update
+apt-get install -y iputils-ping
+
+5) Volumes:
+
+vim docker-compose9.yml
+
+version: "3.8"
+services:
+  web:
+    image: nginx:alpine
+    volumes:
+      - type: volume
+        source: mydata1
+        target: /data
+        volume:
+          nocopy: true 
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_PASSWORD: mysecretpassword
+    volumes:
+      - "/var/run/postgres/postgres.sock:/var/run/postgres/postgres.sock"
+      - "dbdata:/var/lib/postgresql/data"
+volumes: 
+  mydata1: 
+  dbdata:
+
+docker-compose -f docker-compose9.yml up
+
+
+
+
+6) deploy:
+
+docker swarm init --advertise-addr 192.168.0.28
+
+vim docker-compose11.yml
+
+version: "3.8"
+services:
+  redis:
+    image: redis:alpine
+    deploy:
+      replicas: 2
+      placement:
+        max_replicas_per_node: 1
+      update_config:
+        parallelism: 2
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+
+  db:
+    image: postgres
+    deploy:
+      replicas: 2
+
+docker-compose -f docker-compose11.yml up -d
+
+docker stack deploy -c docker-compose11.yml MySTACK
+
+7) rollback / update config:
+
+vim dc.yml
+
+version: "3.8"
+services:
+  vote:
+    image: nginx:latest    
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 2
+        delay: 10s
+        order: stop-first
+      restart_policy:
+        condition: on-failure
+
+docker stack deploy -c dc.yml STACK2
+
+docker service update --image nginx:stable-perl STACK2_vote
+
+

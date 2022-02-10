@@ -1,0 +1,80 @@
+docker swarm init --advertise-addr 192.168.0.8
+
+
+    docker swarm join --token SWMTKN-1-0y2ih7bxnvwfjfzay4wcu9ah4ivapxa75h9yprca1ocx3e4qgx-3465f8pwmupicgpz1rm16frgf 192.168.0.8:2377
+
+
+To generate the join token:
+
+docker swarm join-token worker
+
+
+2) check the status:
+
+docker node ls
+
+3) update the master availability to drain:
+docker node update --availability drain <hostname>
+docker node update --availability active <hostname>
+
+4) Create a service:
+docker service create -p 80:80 --name web nginx
+
+5) list the services:
+
+docker service ls
+
+6) TO get the details of a particular service:
+docker service ps web
+
+7) curl http://localhost:80
+
+8) create a service  in relicated mode (global service)
+docker service create --mode global -p 8888:80 --name web2 nginx
+
+9) To create multiple replicas of our service:
+ docker service create --name nginxapp --replicas=3 -p 8080:80 nginx:latest
+
+Load Balancing:
+
+to understand how loadbalancing works, we shall create a sample page on all
+ the nginx containers created as part of service and request it
+
+docker container exec -it web.2.u24iffabkwtzqcu5chd4v1fw7 sh
+cd /usr/share/nginx/html
+echo 'This is container 1' > sample.html
+
+docker container exec -it  web.3.peq9af7rea6j48fagvvcxljj9 sh
+cd /usr/share/nginx/html
+echo 'This is container 2' > sample.html
+
+docker container exec -it web.1.tv92a4vwysq2p6jh25oakwjfx sh
+cd /usr/share/nginx/html
+echo 'This is container 3' > sample.html
+
+curl http://nodeip:publishedport/sample.html
+
+10) To bypass the Routing mesh:
+ docker service create --name bypassRM --replicas 2 --publish published=8000,target=80,mode=host nginx:alpine
+
+
+10) update the service to another version:
+
+docker service update --image nginx:stable-perl --replicase 4 web
+
+11) Rollback:
+
+docker service rollback web
+
+12) Logs:
+docker service logs web
+
+13) docker service update --image nginx:stable-perl --update-order start-first --replicas 3 web
+docker service update --replicas 4 web
+
+14) removing a service:
+docker service rm web
+
+15) Removing a node from swarm:
+
+docker swarm leave

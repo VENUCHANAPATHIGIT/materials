@@ -1,0 +1,86 @@
+1) Default Bridge:
+-------------------------------------------
+docker network ls
+
+brctl show
+
+vim dockerfile
+
+FROM ubuntu:latest
+MAINTAINER Prasanti
+RUN apt-get update
+RUN apt-get install -y iputils-ping
+CMD sleep 300
+
+docker build . -t myubuntuimage
+
+docker run --name ubuntucont2 -d myubuntuimage
+
+docker run -dit --name ubuntucont3 myimage /bin/bash
+
+docker inspect bridge
+
+docker exec -it ubuntucont1 /bin/bash
+
+ping 172.17.0.3
+
+2) Creating a user defined bridge network and attaching the containers:
+--------------------------------------------------------------------------
+docker network create --driver bridge ubuntu-net 
+
+docker network ls
+
+docker inspect ubuntu-net
+
+docker run  --name ubuntucont5 --network ubuntu-net nginx myubuntuimage
+docker run  --name ubuntucont7 --network ubuntu-net -d nginx
+
+ myubuntuimage /bin/bash
+
+docker exec -it ubuntucont4 /bin/bash
+
+172.17.0.3
+
+docker network disconnect ubuntu-net ubuntucont4 
+docker network connect ubuntu-net ubuntucont4 
+
+ 3) Using Host Network
+--------------------------------------------
+docker run --name my_cont --network host -d nginx
+
+docker inspect host
+
+curl http://localhost:80
+
+docker exec -it my_cont /bin/bash
+
+4) None 
+-----------------------------------------------
+docker run -it --network none --name no-net-alpine alpine:latest /bin/sh
+
+List all the interfaces created and ip addresses assigned:
+docker exec no-net-alpine ip addr show
+
+
+5) Overlay:
+-------------------------------------------------
+
+docker swarm init --advertise-addr=192.168.0.8
+docker node ls --filter role=manager
+docker node ls --filter role=worker
+docker network ls
+
+docker network create --driver=overlay --attachable test-net
+
+docker service create --replicas 3 -p 80:80 --name web nginx
+
+docker run -dit --name nginx1 --network test-net -p 80:80 nginx 
+docker run -dit --name nginx2 --network test-net -p 80:80 nginx 
+
+docker exec -it nginx1 /bin/bash
+
+
+
+
+
+docker swarm join --token SWMTKN-1-4wyhmgrospxmqbsn10ausq1dd5q3pqmr9rersi6gub4fi2sqxo-9325ntfx38ehkyt2cr74xoqxx 192.168.0.13:2377
